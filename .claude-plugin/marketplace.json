@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "claude-prd",
+  "description": "PRD authoring and story-by-story implementation workflow for Claude Code",
+  "owner": {
+    "name": "Josh Priddle"
+  },
+  "plugins": [
+    {
+      "name": "prd",
+      "description": "Create and work through Product Requirements Documents story-by-story. Provides /prd:create (interactive PRD authoring) and /prd:work (subagent-driven implementation of one story per invocation).",
+      "source": "./",
+      "category": "workflow",
+      "homepage": "https://github.com/built-fast/claude-prd"
+    }
+  ]
+}
