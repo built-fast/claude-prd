@@ -4,5 +4,8 @@
   "description": "Create and work through Product Requirements Documents story-by-story. Provides /prd:create (interactive PRD authoring) and /prd:work (subagent-driven implementation of one story per invocation).",
   "author": {
     "name": "Josh Priddle"
-  }
+  },
+  "homepage": "https://github.com/built-fast/claude-prd",
+  "repository": "https://github.com/built-fast/claude-prd",
+  "keywords": ["prd", "product-requirements", "workflow", "stories"]
 }
