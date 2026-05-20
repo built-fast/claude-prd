@@ -62,3 +62,6 @@ Story-by-story execution keeps each implementation session focused with a clean 
 - Claude Code with plugin support
 - A git repo (the worker commits each story)
 
+## License
+
+MIT - see [LICENSE](LICENSE) for details.
