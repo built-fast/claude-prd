@@ -35,7 +35,17 @@ Set:
 
 Briefly tell the user which PRD and story you're dispatching, e.g. `Dispatching subagent for US-003 (Add priority filter dropdown) from docs/prds/user-auth/prd.md`.
 
-## Step 2 — Spawn a subagent with the work prompt
+## Step 2 — Ensure a working branch
+
+The subagent commits during the run, so it must not be on the repo's main branch.
+
+1. Get the current branch: `git rev-parse --abbrev-ref HEAD`.
+2. If it is **not** `main` or `master`, continue to Step 3 — the user already has a working branch.
+3. If it **is** `main` or `master`, do **not** dispatch yet. Propose a feature branch name derived from the PRD slug and story, e.g. `prd/<slug>-<story-id-lowercased>` (like `prd/user-auth-us-003`). Ask the user to confirm the name (they may supply their own).
+4. On confirmation, create and switch to it with `git switch -c <branch>`. If the branch already exists, switch to it with `git switch <branch>` instead. Then continue to Step 3.
+5. If the user declines to create a branch, stop without dispatching — don't commit work onto `main`.
+
+## Step 3 — Spawn a subagent with the work prompt
 
 Use the **Agent** tool with `subagent_type: "general-purpose"` and pass the block below as the `prompt`. Substitute `{{PRD_PATH}}`, `{{PROGRESS_PATH}}`, and `{{STORY_ID}}` with the values from Step 1 — leave everything else exactly as written.
 
@@ -101,7 +111,7 @@ Return a single concise message to the parent session (no need to dump full diff
 If you had to stop without completing the story (failing tests you couldn't fix, ambiguous requirements, missing dependencies), say so clearly and leave `Status: todo` so the next `/prd:work` can pick it up — but **do** still record an entry in the progress log explaining what blocked you, so the next attempt has that context.
 ```
 
-## Step 3 — Relay the result
+## Step 4 — Relay the result
 
 When the subagent finishes, summarize its report for the user in 3–6 lines. Then:
 
