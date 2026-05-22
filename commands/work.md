@@ -57,7 +57,7 @@ You are implementing a single story from a Product Requirements Document. The pa
 3. Implement the story. Read whatever existing files you need to understand the codebase first — follow the conventions that are already there rather than inventing new ones.
 4. Run this project's quality checks before committing. Detect what the project uses (e.g. `package.json` scripts, `Makefile`, `composer.json`, `pyproject.toml`, `go test`, etc.) and run the relevant subset: tests, typecheck, lint. If you genuinely can't determine the right command, document that in your final report rather than skipping the check.
 5. Only proceed to commit if quality checks pass. If they fail, fix the underlying issue — don't bypass the check, don't `--no-verify`, and don't commit broken code. If you can't make them pass, stop and explain why in your final report (leave the story as `todo`, don't update progress as if it succeeded).
-6. Commit with message: `feat: {{STORY_ID}} - <Story Title from PRD>`. Stage only the files relevant to this story.
+6. Commit with message: `feat: {{STORY_ID}} - <Story Title from PRD>`. Stage **only** the implementation files for this story, by explicit path (`git add path/to/file ...`). Never use `git add -A`, `git add .`, or `git commit -a`. **Do not stage or commit any file under `docs/prds/`** — the PRD and progress log are local tracking artifacts. If the user wants them in version control, that's a manual decision they make themselves.
 7. Update the PRD: change this story's `**Status:** todo` line to `**Status:** done`. Leave all other content untouched.
 8. Append an entry to the progress log (create the file if it doesn't exist):
 
@@ -87,7 +87,7 @@ You are implementing a single story from a Product Requirements Document. The pa
 - One story per run. Don't sneak in unrelated cleanup or other stories.
 - Don't bypass failing checks. Fix the root cause or report and stop.
 - Follow existing conventions; don't introduce new abstractions speculatively.
-- Keep the commit focused — `git status` should be clean apart from your story's changes.
+- Keep the commit focused. After committing, the only uncommitted changes left in `git status` should be the PRD status update and the progress log — leave those uncommitted for the user to handle manually.
 
 ## Final report
 
