@@ -1,6 +1,6 @@
 # PRD Plugin for Claude Code
 
-Create and work through Product Requirements Documents story-by-story. The plugin provides two slash commands that pair together: one to author a PRD via guided Q&A, and one to implement it incrementally with a fresh subagent per story.
+Create and work through Product Requirements Documents story-by-story. The plugin provides three slash commands that pair together: one to author a PRD via guided Q&A, one to implement it incrementally with a fresh subagent per story, and one to review the resulting branch against the PRD.
 
 ## Install
 
@@ -9,7 +9,7 @@ Create and work through Product Requirements Documents story-by-story. The plugi
 /plugin install prd@claude-prd
 ```
 
-After installing, `/prd:create` and `/prd:work` are available in any project.
+After installing, `/prd:create`, `/prd:work`, and `/prd:review` are available in any project.
 
 ## Commands
 
@@ -38,6 +38,27 @@ Argument forms:
 
 One story per invocation, by design — you stay in the loop between stories.
 
+### `/prd:review [<prd-slug>]`
+
+Reviews the current feature branch against the PRD. The dispatcher resolves the PRD and the branch diff (everything the branch adds on top of `main`/`master`), then fans out **four parallel subagents** that each check one concern:
+
+1. **Completion** — are the `done` stories' acceptance criteria actually met by the code?
+2. **Conventions** — does the work follow the project's existing structure, naming, and patterns?
+3. **Tests** — does it carry the kind of tests this project already writes for comparable behavior?
+4. **Security & unknowns** — any vulnerabilities, committed secrets, or unresolved open questions?
+
+Findings are aggregated, false-positive-filtered by confidence, and grouped by severity (blocking / recommended / nitpick). The command writes a dated report to `docs/prds/<slug>/review.md` (with a story-completion table, pre-merge checklist, and post-merge/deploy steps), then proposes concrete PRD changes for your confirmation:
+
+- A `done` story whose criteria aren't met is **reopened** (`done` → `todo`) with the specific gap added as new acceptance criteria.
+- Genuinely new scope (security fixes, missing tests, open questions to build) becomes **new `US-NNN` stories**.
+
+Nothing is written to the PRD until you confirm. After applying changes, run `/prd:work` to address them, then `/prd:review` again to re-verify.
+
+Argument forms:
+
+- `/prd:review` — reviews the most recently modified PRD.
+- `/prd:review <slug>` — reviews that specific PRD.
+
 ## Typical flow
 
 ```
@@ -51,11 +72,18 @@ One story per invocation, by design — you stay in the loop between stories.
 /prd:work
 # subagent implements US-002, builds on US-001's work
 # ... repeat until all stories are done
+
+/prd:review
+# parallel subagents check completion, conventions, tests, security
+# writes review.md, proposes fixes as reopened/new stories
+
+/prd:work    # address any remediation stories
+/prd:review  # re-verify, then merge
 ```
 
-## Why two commands
+## Why these commands
 
-Story-by-story execution keeps each implementation session focused with a clean context window, and gives you a natural review checkpoint between stories. The PRD acts as the durable contract; `progress.md` captures cross-story learnings so later stories inherit the conventions discovered in earlier ones.
+Story-by-story execution keeps each implementation session focused with a clean context window, and gives you a natural review checkpoint between stories. The PRD acts as the durable contract; `progress.md` captures cross-story learnings so later stories inherit the conventions discovered in earlier ones. `/prd:review` closes the loop, checking the finished branch back against that contract and feeding any gaps back into the same story-driven workflow.
 
 ## Requirements
 

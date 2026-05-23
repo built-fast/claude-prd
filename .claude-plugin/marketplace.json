@@ -8,7 +8,7 @@
   "plugins": [
     {
       "name": "prd",
-      "description": "Create and work through Product Requirements Documents story-by-story. Provides /prd:create (interactive PRD authoring) and /prd:work (subagent-driven implementation of one story per invocation).",
+      "description": "Create and work through Product Requirements Documents story-by-story. Provides /prd:create (interactive PRD authoring), /prd:work (subagent-driven implementation of one story per invocation), and /prd:review (parallel-subagent review of a branch against its PRD).",
       "source": "./",
       "category": "workflow",
       "homepage": "https://github.com/built-fast/claude-prd"
