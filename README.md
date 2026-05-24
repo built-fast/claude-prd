@@ -15,7 +15,7 @@ After installing, `/prd:create`, `/prd:work`, and `/prd:review` are available in
 
 ### `/prd:create <brief feature description>`
 
-Guides you through writing a PRD via lettered clarifying questions, then writes a structured markdown file to `docs/prds/<slug>/prd.md`. Produces an ordered list of user stories with stable IDs (`US-001`, `US-002`, ...), verifiable acceptance criteria, and a `Status: todo` flag on each — designed to be consumed by `/prd:work`.
+Guides you through writing a PRD via lettered clarifying questions, then writes a structured markdown file to `docs/prds/<slug>/prd.md`. Produces an ordered list of user stories with stable IDs (`US-001`, `US-002`, ...), verifiable acceptance criteria, and a `Status: todo` flag on each — designed to be consumed by `/prd:work`. It also detects the project's full-suite commands and records them in a `## Quality Gate` section, which becomes the single source of truth that `/prd:work` and `/prd:review` both run.
 
 Does not write any implementation code.
 
@@ -25,7 +25,7 @@ Dispatches a fresh subagent to implement **one** story from a PRD. The subagent:
 
 1. Reads the PRD and any existing `progress.md`.
 2. Implements the lowest-priority `todo` story (or the one you specified).
-3. Runs the project's quality checks (tests, typecheck, lint).
+3. Runs the **full** quality gate (whole test suite, typecheck, lint) — not just the tests near the change — so a story can't silently break another and only fail in CI. If the PRD predates the gate, it detects the commands and back-fills the section.
 4. Commits with `feat: US-NNN - <Story Title>`.
 5. Flips the story's status to `done` in the PRD.
 6. Appends an entry to `docs/prds/<slug>/progress.md`, including any reusable codebase patterns it discovered.
@@ -40,7 +40,7 @@ One story per invocation, by design — you stay in the loop between stories.
 
 ### `/prd:review [<prd-slug>]`
 
-Reviews the current feature branch against the PRD. The dispatcher resolves the PRD and the branch diff (everything the branch adds on top of `main`/`master`), then fans out **four parallel subagents** that each check one concern:
+Reviews the current feature branch against the PRD. The dispatcher resolves the PRD and the branch diff (everything the branch adds on top of `main`/`master`), then **runs the quality gate on the branch HEAD** — the one point in the workflow where the review actually executes the code. A red suite is an automatic blocking finding that forces a "Needs work" verdict, so a regression is caught here rather than in CI. It then fans out **four parallel subagents** (which read, not run) that each check one concern:
 
 1. **Completion** — are the `done` stories' acceptance criteria actually met by the code?
 2. **Conventions** — does the work follow the project's existing structure, naming, and patterns?
@@ -74,7 +74,8 @@ Argument forms:
 # ... repeat until all stories are done
 
 /prd:review
-# parallel subagents check completion, conventions, tests, security
+# runs the full quality gate, then parallel subagents check
+# completion, conventions, tests, security
 # writes review.md, proposes fixes as reopened/new stories
 
 /prd:work    # address any remediation stories

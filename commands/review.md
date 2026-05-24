@@ -34,7 +34,7 @@ Set:
 
 - `PRD_PATH` — absolute path to the PRD
 - `PROGRESS_PATH` — sibling `progress.md` (may not exist; treat its `## Codebase Patterns` section, if present, as the source of truth for conventions learned during implementation)
-- `REVIEW_PATH` — sibling `review.md` (you will write this in Step 5)
+- `REVIEW_PATH` — sibling `review.md` (you will write this in Step 6)
 - `SLUG`, `PROJECT_NAME` — from the PRD frontmatter
 
 ## Step 2 — Resolve the branch diff
@@ -55,7 +55,20 @@ Note: the PRD and progress files are intentionally **not** committed (`/prd:work
 
 Briefly tell the user what you're reviewing, e.g. `Reviewing branch prd/user-auth (6 commits) against main for docs/prds/user-auth/prd.md — US-001…US-006 marked done.`
 
-## Step 3 — Fan out parallel review subagents
+## Step 3 — Run the quality gate (the execution backstop)
+
+The parallel reviewers in the next step **read** code; they do not run it. This step is the one place the review actually executes the project — so a regression that static reading misses (a story that broke another story's tests, a failure that only appears when the whole suite runs together) is caught here instead of in CI. Do this yourself in the dispatcher, once, before fanning out.
+
+1. **Find the gate commands.** Read the PRD's `## Quality Gate` section. If it's absent (older PRD), detect the full-suite commands from the repo — mirror the CI config (`.github/workflows/*`, etc.) if there is one — and note in the report that the PRD had no gate recorded.
+2. **Test the branch as it stands.** You're on the feature branch at HEAD; the uncommitted PRD/progress edits don't affect the suite. Run from the repo root.
+3. **Run every gate command, full-suite.** Capture each result (pass/fail) and, for any failure, the failing tests / key error output.
+4. **Record the outcome — it headlines the report:**
+   - **All green** → note it and proceed to fan-out.
+   - **Any command red** → this is an automatic `blocking` finding and forces a **⚠️ Needs work** verdict, regardless of what the static reviewers conclude. Capture which command failed and the failing tests/errors. Still run the fan-out (its findings feed the same remediation pass), but the suite failure is the headline.
+
+Do not skip this step or assume CI covers it — executing the gate here is the entire point.
+
+## Step 4 — Fan out parallel review subagents
 
 Spawn **four** subagents with the **Agent** tool, `subagent_type: "general-purpose"`, **in a single message so they run concurrently**. Each gets the same context block; only the `{{FOCUS}}` differs. Substitute `{{PRD_PATH}}`, `{{PROGRESS_PATH}}`, `{{BASE_REF}}`, `{{HEAD_REF}}`, `{{BRANCH}}`, and `{{FOCUS}}` — leave everything else exactly as written.
 
@@ -93,7 +106,7 @@ For each finding:
 Rules:
 - Only flag things you can point at with evidence. No vague "consider improving X".
 - Judge against THIS project's conventions and THIS PRD's criteria — not generic ideals. If the project doesn't test a certain layer, don't demand tests for it.
-- Don't flag things a linter/formatter/typechecker would catch — assume CI runs those.
+- Don't flag things the quality gate would catch — the dispatcher runs the full suite (tests, typecheck, lint) separately, so don't predict pass/fail or duplicate it. Focus on what execution can't reveal: logic errors, design fit, coverage gaps, security.
 - Don't flag pre-existing issues on lines this branch didn't touch.
 - If your focus area is clean, return exactly: `No findings.`
 ```
@@ -112,7 +125,7 @@ Check that the new code fits the existing codebase. Compare against neighbouring
 
 **Agent 3 — Tests:**
 ```
-Check test coverage *relative to what this project already tests*. First learn the project's testing style — find the test directory/framework and look at how comparable existing features are tested (unit vs feature/integration). Then check whether the branch adds tests of that same kind for the behaviour it introduces, and whether they actually exercise the acceptance criteria. Flag untested new behaviour that the project's own conventions would normally cover, and tests that assert nothing meaningful. Do NOT demand a level of testing the project doesn't otherwise practise.
+Check test *coverage* relative to what this project already tests — the suite is being run separately by the dispatcher, so don't predict whether it passes; focus on whether the right tests exist. First learn the project's testing style — find the test directory/framework and look at how comparable existing features are tested (unit vs feature/integration). Then check whether the branch adds tests of that same kind for the behaviour it introduces, and whether they actually exercise the acceptance criteria. Flag untested new behaviour that the project's own conventions would normally cover, and tests that assert nothing meaningful. Do NOT demand a level of testing the project doesn't otherwise practise.
 ```
 
 **Agent 4 — Security & unknowns:**
@@ -120,21 +133,22 @@ Check test coverage *relative to what this project already tests*. First learn t
 Look for security issues introduced by this branch: injection (SQL/command/template), missing authn/authz checks, unvalidated input, secrets or credentials committed to the repo, unsafe deserialization, SSRF, path traversal, missing output encoding, weak crypto, leaked internal details in errors, and dependency risks (new packages — do they exist and are they reputable?). Separately, surface UNKNOWNS: list any `Open Questions` from the PRD that remain unresolved by the code, plus any new ambiguities or risky assumptions the implementation baked in. Report unknowns as `recommended` findings titled "Open question: ...".
 ```
 
-## Step 4 — Aggregate and filter
+## Step 5 — Aggregate and filter
 
 When all four agents return:
 
 1. Collect every finding.
-2. **Drop false positives**: discard anything with `Confidence < 50`. For `security` findings, keep `Confidence ≥ 40` but tag them `(needs verification)` so the user knows to confirm.
-3. **De-duplicate**: if two agents flag the same thing, keep one and note both lenses.
-4. **Group by severity**: `blocking` → `recommended` → `nitpick`.
-5. **Build the story-completion table**: for each `done` story, mark ✅ (criteria met) or ⚠️ (something unmet — link the relevant finding). Note any stories still `todo` as ⏳ (not reviewed for completion).
+2. **Fold in the quality-gate result from Step 3**: if the suite was red, add it as the **top** `blocking` finding (which command failed, which tests/errors) before anything the static agents surfaced.
+3. **Drop false positives**: discard anything with `Confidence < 50`. For `security` findings, keep `Confidence ≥ 40` but tag them `(needs verification)` so the user knows to confirm.
+4. **De-duplicate**: if two agents flag the same thing, keep one and note both lenses.
+5. **Group by severity**: `blocking` → `recommended` → `nitpick`.
+6. **Build the story-completion table**: for each `done` story, mark ✅ (criteria met) or ⚠️ (something unmet — link the relevant finding). Note any stories still `todo` as ⏳ (not reviewed for completion).
 
 Decide an overall **verdict**:
-- ✅ **Ready to merge** — no `blocking` findings.
-- ⚠️ **Needs work** — one or more `blocking` findings. State the count.
+- ✅ **Ready to merge** — the quality gate was green **and** there are no `blocking` findings.
+- ⚠️ **Needs work** — the quality gate was red, or there are one or more `blocking` findings. State the count (and lead with the gate failure if that's the cause).
 
-## Step 5 — Write the review report
+## Step 6 — Write the review report
 
 Write `REVIEW_PATH` (`docs/prds/<slug>/review.md`). If it already exists, prepend a new dated section above the old one (most recent first) rather than overwriting — reviews accumulate like the progress log. Use this structure:
 
@@ -145,6 +159,7 @@ Write `REVIEW_PATH` (`docs/prds/<slug>/review.md`). If it already exists, prepen
 
 **Branch:** <branch> · **Range:** <base-short-sha>..HEAD (<n> commits)
 **Stories reviewed:** <e.g. US-001…US-006 done; US-007 todo>
+**Quality gate:** <✅ all green | 🔴 `<command>` failed — <n> tests / key error>
 
 ### Story completion
 - US-001 <title> — ✅
@@ -164,7 +179,7 @@ Write `REVIEW_PATH` (`docs/prds/<slug>/review.md`). If it already exists, prepen
 - <unresolved PRD open questions + new ones surfaced>
 
 ### ✅ Pre-merge checklist
-- [ ] <derived from blocking/recommended findings + project basics: full test suite green, etc.>
+- [ ] <derived from blocking/recommended findings. The quality gate was already executed in this review — mark it ✅ if green, or list "get the gate green (`<command>`)" as the first item if it was red.>
 
 ### 🚀 Post-merge / deploy
 - [ ] <migrations to run, env vars/secrets to set, feature flags, deploy ordering, doc/changelog updates — only the ones that actually apply>
@@ -172,7 +187,7 @@ Write `REVIEW_PATH` (`docs/prds/<slug>/review.md`). If it already exists, prepen
 
 Generate the pre-merge and post-merge sections yourself from the findings plus what you can see of the project (migrations, env files, deploy config, changelog). Only list steps that genuinely apply — don't pad with generic advice.
 
-## Step 6 — Propose PRD changes and confirm
+## Step 7 — Propose PRD changes and confirm
 
 Translate the actionable findings into a concrete remediation plan, using **per-issue judgment**:
 
@@ -191,11 +206,11 @@ Proposed PRD changes:
 
 **Do not edit the PRD until the user confirms.** Let them adjust, drop, or reprioritize items. On confirmation, edit `PRD_PATH` to apply exactly the agreed changes — preserve all other content, keep IDs stable, and don't touch stories that passed review. If the user declines, leave the PRD untouched.
 
-## Step 7 — Relay the result
+## Step 8 — Relay the result
 
 Summarize for the user in a few lines:
 
-- The verdict and the count of blocking / recommended findings.
+- The verdict and the count of blocking / recommended findings — lead with the quality-gate result (green, or which command failed).
 - Where the full report lives (`docs/prds/<slug>/review.md`).
 - What changed in the PRD, if anything.
 - Clear next step: if stories were reopened or added, tell them to run `/prd:work` to address them, then `/prd:review` again to re-verify. If the verdict was clean, say it's ready to merge and point at the pre-merge checklist.

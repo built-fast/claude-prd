@@ -65,8 +65,11 @@ You are implementing a single story from a Product Requirements Document. The pa
 1. Read the PRD. Read the progress log if it exists — pay particular attention to any `## Codebase Patterns` section at the top, which captures conventions learned in earlier iterations.
 2. Locate the {{STORY_ID}} story in the PRD. Read its Description, Acceptance Criteria, and the surrounding Functional Requirements / Technical Considerations sections for context.
 3. Implement the story. Read whatever existing files you need to understand the codebase first — follow the conventions that are already there rather than inventing new ones.
-4. Run this project's quality checks before committing. Detect what the project uses (e.g. `package.json` scripts, `Makefile`, `composer.json`, `pyproject.toml`, `go test`, etc.) and run the relevant subset: tests, typecheck, lint. If you genuinely can't determine the right command, document that in your final report rather than skipping the check.
-5. Only proceed to commit if quality checks pass. If they fail, fix the underlying issue — don't bypass the check, don't `--no-verify`, and don't commit broken code. If you can't make them pass, stop and explain why in your final report (leave the story as `todo`, don't update progress as if it succeeded).
+4. Run the project's **full quality gate** before committing — the whole suite, not just the tests near your change. Every other story runs in its own isolated session and can't see your work; running the complete suite on every story is what stops one story silently breaking another and only finding out in CI.
+   - Read the PRD's `## Quality Gate` section and run **every** command listed there, verbatim, against the whole project. You may run targeted tests while iterating, but the gate immediately before committing is the *full* suite passing.
+   - If the PRD has **no** `## Quality Gate` section (an older PRD), detect the full-suite commands yourself — `package.json` scripts, `composer.json`, `Makefile`, `pyproject.toml`, `go test ./...`, etc., and mirror the repo's CI config if there is one — run them, and **write the section back into the PRD** so later stories and the review reuse the exact same commands.
+   - If a gate command genuinely can't be determined, document that in your final report rather than silently skipping it.
+5. Only proceed to commit if the **full** gate is green. If it fails, fix the underlying issue — don't bypass the check, don't `--no-verify`, don't commit broken code, and don't narrow the run to dodge a failure. If the suite is *already* red before you start (a previous story left a regression), fix it if it's small and in scope; otherwise stop and report it as a blocker so it's dealt with deliberately. If you can't get the gate green, stop and explain why in your final report (leave the story as `todo`, don't update progress as if it succeeded).
 6. Commit with message: `feat: {{STORY_ID}} - <Story Title from PRD>`. Stage **only** the implementation files for this story, by explicit path (`git add path/to/file ...`). Never use `git add -A`, `git add .`, or `git commit -a`. **Do not stage or commit any file under `docs/prds/`** — the PRD and progress log are local tracking artifacts. If the user wants them in version control, that's a manual decision they make themselves.
 7. Update the PRD: change this story's `**Status:** todo` line to `**Status:** done`. Leave all other content untouched.
 8. Append an entry to the progress log (create the file if it doesn't exist):
@@ -81,8 +84,9 @@ You are implementing a single story from a Product Requirements Document. The pa
    - path/to/file.ext
    - path/to/other.ext
 
-   **Quality checks**
-   - <Command run>: <result>
+   **Quality gate** (full suite — every gate command, with its result)
+   - <gate command 1>: <pass/fail>
+   - <gate command 2>: <pass/fail>
 
    **Learnings**
    - <Patterns discovered, gotchas, useful context for future stories>
@@ -97,7 +101,7 @@ You are implementing a single story from a Product Requirements Document. The pa
 - One story per run. Don't sneak in unrelated cleanup or other stories.
 - Don't bypass failing checks. Fix the root cause or report and stop.
 - Follow existing conventions; don't introduce new abstractions speculatively.
-- Keep the commit focused. After committing, the only uncommitted changes left in `git status` should be the PRD status update and the progress log — leave those uncommitted for the user to handle manually.
+- Keep the commit focused. After committing, the only uncommitted changes left in `git status` should be the PRD edits (the status flip, plus the `## Quality Gate` section if you had to back-fill it) and the progress log — leave those uncommitted for the user to handle manually.
 
 ## Final report
 
@@ -105,7 +109,7 @@ Return a single concise message to the parent session (no need to dump full diff
 
 - Story ID and title
 - Commit SHA
-- Quality checks that ran and their results
+- The full quality-gate commands that ran and their pass/fail results
 - Anything notable the user should know (a decision you made, an unexpected detail, a follow-up suggestion)
 
 If you had to stop without completing the story (failing tests you couldn't fix, ambiguous requirements, missing dependencies), say so clearly and leave `Status: todo` so the next `/prd:work` can pick it up — but **do** still record an entry in the progress log explaining what blocked you, so the next attempt has that context.
