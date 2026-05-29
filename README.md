@@ -26,7 +26,7 @@ Dispatches a fresh subagent to implement **one** story from a PRD. The subagent:
 1. Reads the PRD and any existing `progress.md`.
 2. Implements the lowest-priority `todo` story (or the one you specified).
 3. Runs the **full** quality gate (whole test suite, typecheck, lint) — not just the tests near the change — so a story can't silently break another and only fail in CI. If the PRD predates the gate, it detects the commands and back-fills the section.
-4. Commits with `feat: US-NNN - <Story Title>`.
+4. Commits in the repo's own style — a `<Scope>: <imperative description>` subject learned from `git log`, no conventional-commits prefix and no story code (the story is tracked via the PRD status and progress log instead).
 5. Flips the story's status to `done` in the PRD.
 6. Appends an entry to `docs/prds/<slug>/progress.md`, including any reusable codebase patterns it discovered.
 

@@ -155,7 +155,7 @@ The `/prd:work` subagent will pick the lowest-numbered `Priority` with `Status: 
 - **Acceptance criteria must be verifiable.** "Button shows confirmation dialog before deleting" is good. "Works correctly" is not. The subagent uses these as its done-check.
 - **Bake quality into each story.** The last acceptance criterion of every story is the `## Quality Gate` passing — the *full* suite, not a subset near the change. Don't invent a separate "add tests" story at the end; tests are part of each story. (The gate catches cross-story regressions because each isolated `/prd:work` run executes the whole suite.)
 - **Preserve `Status: todo` on every story.** `/prd:work` flips it to `done` as stories are completed.
-- **Use stable IDs.** `US-001`, `US-002`, ... — these are referenced in commit messages and progress logs.
+- **Use stable IDs.** `US-001`, `US-002`, ... — these are referenced in the progress log and PRD status as stories are completed.
 
 ### Writing for the implementer
 

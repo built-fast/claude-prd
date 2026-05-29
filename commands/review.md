@@ -39,7 +39,7 @@ Set:
 
 ## Step 2 — Resolve the branch diff
 
-The work was implemented as commits on a feature branch (each story is a `feat: US-NNN - ...` commit). The review target is everything this branch adds on top of the main branch.
+The work was implemented as commits on a feature branch. The review target is everything this branch adds on top of the main branch.
 
 1. Get the current branch: `git rev-parse --abbrev-ref HEAD`.
 2. If it **is** `main` or `master`, stop — there's no feature branch to review. Tell the user to switch to the branch that holds the PRD work (`git switch <branch>`) and rerun.
