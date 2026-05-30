@@ -1,6 +1,6 @@
 {
   "name": "prd",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Create and work through Product Requirements Documents story-by-story. Provides /prd:create (interactive PRD authoring), /prd:work (subagent-driven implementation of one story per invocation), and /prd:review (parallel-subagent review of a branch against its PRD).",
   "author": {
     "name": "Josh Priddle"
