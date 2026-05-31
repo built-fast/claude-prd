@@ -1,7 +1,6 @@
 ---
 description: Implement one story from a PRD in an isolated subagent
 argument-hint: "[<prd-slug>] [<story-id>]"
-model: sonnet
 ---
 
 # PRD Worker
